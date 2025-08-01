@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Selfie Collage Maker - Aryana</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background-image: linear-gradient(to bottom right, #ffeb3b, #ff9800, #f44336);
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+    }
+    video, canvas {
+      margin: 10px;
+      border: 2px solid #ffffff;
+      border-radius: 12px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 5px;
+      max-width: 800px;
+      margin: auto;
+    }
+    .grid img {
+      width: 70px;
+      height: 70px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    h1, h3 {
+      color: white;
+      text-shadow: 1px 1px 3px black;
+    }
+    #downloadLink {
+      display: none;
+      font-size: 16px;
+      color: white;
+      background: green;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>📸 Selfie Collage Maker - Aryana</h1>
+  <video id="video" width="300" height="225" autoplay></video><br>
+  <button onclick="takeSelfie()">Take Selfie</button>
+  <button onclick="generateCollage()">Generate Collage</button>
+  <button onclick="generateCollage(5)">5 Photos Collage</button>
+  <button onclick="generateCollage(10)">10 Photos Collage</button>
+  <button onclick="payToDownload()">💰 Pay ₹10 to Download</button>
+  <br><br>
+  <a id="downloadLink" download="collage.jpg">📥 Download Collage</a>
+
+  <h3>Your Photos (<span id="count">0</span>/100)</h3>
+  <div class="grid" id="photoGrid"></div>
+
+  <canvas id="collageCanvas" style="display:none;"></canvas>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const photoGrid = document.getElementById('photoGrid');
+    const countEl = document.getElementById('count');
+    const canvas = document.getElementById('collageCanvas');
+    const downloadLink = document.getElementById('downloadLink');
+    const photos = [];
+    let collageGenerated = false;
+    let collageDataUrl = "";
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream)
+      .catch(err => alert('Camera access denied'));
+
+    function takeSelfie() {
+      if (photos.length >= 100) return alert("Maximum 100 photos allowed!");
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = 70;
+      tempCanvas.height = 70;
+      const ctx = tempCanvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, 70, 70);
+
+      const img = new Image();
+      img.src = tempCanvas.toDataURL('image/jpeg');
+      photos.push(img);
+
+      photoGrid.appendChild(img);
+      countEl.innerText = photos.length;
+    }
+
+    function generateCollage(limit = photos.length) {
+      if (photos.length < 1) return alert("Take at least one selfie!");
+
+      const usedPhotos = photos.slice(0, limit);
+      let cols = Math.ceil(Math.sqrt(usedPhotos.length));
+      let rows = Math.ceil(usedPhotos.length / cols);
+      const size = 70;
+
+      canvas.width = cols * size;
+      canvas.height = rows * size;
+      const ctx = canvas.getContext('2d');
+
+      for (let i = 0; i < usedPhotos.length; i++) {
+        const x = (i % cols) * size;
+        const y = Math.floor(i / cols) * size;
+        ctx.drawImage(usedPhotos[i], x, y, size, size);
+      }
+
+      collageDataUrl = canvas.toDataURL('image/jpeg');
+      collageGenerated = true;
+      alert("✅ Collage ready! Pay to download.");
+    }
+
+    function payToDownload() {
+      if (!collageGenerated) return alert("⚠️ Please generate collage first.");
+
+      var options = {
+        "key": "rzp_test_ibig15iKHvTDl9",
+        "amount": 2000, // ₹10 in paisa
+        "currency": "INR",
+        "name": "Aryana Collage App",
+        "description": "Download your selfie collage",
+        "handler": function (response){
+          alert("🎉 Payment successful!");
+          downloadLink.href = collageDataUrl;
+          downloadLink.style.display = 'inline-block';
+        },
+        "prefill": {
+          "name": "Aryana User",
+          "email": "",
+          "contact": ""
+        },
+        "theme": {
+          "color": "#f44336"
+        }
+      };
+      var rzp = new Razorpay(options);
+      rzp.open();
+    }
+  </script>
+</body>
+</html>
